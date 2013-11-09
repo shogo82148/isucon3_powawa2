@@ -26,18 +26,38 @@ use constant {
     IMAGE_L  => undef,
 };
 
+sub load_file {
+    my $path = shift;
+    open my $fh, "<", $path or die $!;
+    read $fh, my $data, -s $path;
+    close $fh;
+    return $data;
+}
+
 sub convert {
     my $self = shift;
-    my ($orig, $ext, $w, $h) = @_;
-    my ($fh, $filename) = tempfile();
-    my $newfile = "$filename.$ext";
-    system("convert", "-geometry", "${w}x${h}", $orig, $newfile);
-    open my $newfh, "<", $newfile or die $!;
-    read $newfh, my $data, -s $newfile;
-    close $newfh;
-    unlink $newfile;
-    unlink $filename;
-    $data;
+    my ($orig, $ext, $w, $h, $cache) = @_;
+
+    $cache //= '';
+    my $cache_dir = $self->load_config->{cache_dir};
+    my $cache_file = "$cache_dir/$cache";
+    if( $cache && -e $cache_file ) {
+        return load_file($cache_file);
+    } else {
+        my ($fh, $filename) = tempfile();
+        my $newfile = "$filename.$ext";
+        system("convert", "-geometry", "${w}x${h}", $orig, $newfile);
+        open my $newfh, "<", $newfile or die $!;
+        read $newfh, my $data, -s $newfile;
+        close $newfh;
+        if($cache) {
+            File::Copy::move($newfile, $cache_file);
+        } else {
+            unlink $newfile;
+        }
+        unlink $filename;
+        $data;
+    }
 }
 
 sub crop_square {
@@ -174,6 +194,7 @@ get '/icon/:icon' => sub {
     my $icon = $c->args->{icon};
     my $size = $c->req->param("size") || "s";
     my $dir  = $self->load_config->{data_dir};
+    my $cache = "icon_${icon}_${size}";
     if ( ! -e "$dir/icon/${icon}.png" ) {
         $c->halt(404);
     }
@@ -183,7 +204,7 @@ get '/icon/:icon' => sub {
           :                ICON_S;
     my $h = $w;
 
-    my $data = $self->convert("$dir/icon/${icon}.png", "png", $w, $h);
+    my $data = $self->convert("$dir/icon/${icon}.png", "png", $w, $h, $cache);
     $c->res->content_type("image/png");
     $c->res->content( $data );
     $c->res;
@@ -312,9 +333,16 @@ get '/image/:image' => [qw/ get_user /] => sub {
     my $h = $w;
     my $data;
     if ($w) {
-        my $file = $self->crop_square("$dir/image/${image}.jpg", "jpg");
-        $data = $self->convert($file, "jpg", $w, $h);
-        unlink $file;
+        my $cache = "image_${image}_$size";
+        my $cache_dir = $self->load_config->{cache_dir};
+        my $cache_file = "$cache_dir/$cache";
+        if( -e $cache_file ) {
+            $data = load_file($cache_file);
+        } else {
+            my $file = $self->crop_square("$dir/image/${image}.jpg", "jpg");
+            $data = $self->convert($file, "jpg", $w, $h, $cache);
+            unlink $file;
+        }
     }
     else {
         open my $in, "<", "$dir/image/${image}.jpg" or $c->halt(500);
