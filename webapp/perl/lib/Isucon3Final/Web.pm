@@ -12,6 +12,7 @@ use File::Temp qw/ tempfile /;
 use POSIX qw/ floor /;
 use File::Copy;
 use Data::UUID;
+use Imager;
 
 our $TIMEOUT  = 30;
 our $INTERVAL = 2;
@@ -31,7 +32,12 @@ sub convert {
     my ($orig, $ext, $w, $h) = @_;
     my ($fh, $filename) = tempfile();
     my $newfile = "$filename.$ext";
-    system("convert", "-geometry", "${w}x${h}", $orig, $newfile);
+
+    my $img = Imager->new;
+    $img->read(file => '/home/ichinose/workspace/isucon3_powawa2/webapp/data/icon/default.png') or die $img->errstr;
+    $img = $img->scale(xpixels => $w, ypixels => $h);
+    $img->write(file => $newfile);
+    #system("convert", "-geometry", "${w}x${h}", $orig, $newfile);
     open my $newfh, "<", $newfile or die $!;
     read $newfh, my $data, -s $newfile;
     close $newfh;
