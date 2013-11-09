@@ -38,6 +38,7 @@ sub convert {
     my $self = shift;
     my ($orig, $ext, $w, $h, $cache) = @_;
 
+    $cache //= '';
     my $cache_dir = $self->load_config->{cache_dir};
     my $cache_file = "$cache_dir/$cache";
     if( $cache && -e $cache_file ) {
@@ -49,8 +50,11 @@ sub convert {
         open my $newfh, "<", $newfile or die $!;
         read $newfh, my $data, -s $newfile;
         close $newfh;
-        File::Copy::move($newfile, $cache_file);
-        print "move($newfile, $cache_file);\n";
+        if($cache) {
+            File::Copy::move($newfile, $cache_file);
+        } else {
+            unlink $newfile;
+        }
         unlink $filename;
         $data;
     }
