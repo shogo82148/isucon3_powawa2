@@ -33,11 +33,25 @@ sub convert {
     my ($fh, $filename) = tempfile();
     my $newfile = "$filename.$ext";
 
+    system("convert", "-geometry", "${w}x${h}", $orig, $newfile);
+    open my $newfh, "<", $newfile or die $!;
+    read $newfh, my $data, -s $newfile;
+    close $newfh;
+    unlink $newfile;
+    unlink $filename;
+    $data;
+}
+
+sub convert_by_imager {
+    my $self = shift;
+    my ($orig, $ext, $w, $h) = @_;
+    my ($fh, $filename) = tempfile();
+    my $newfile = "$filename.$ext";
+
     my $img = Imager->new;
     $img->read(file => $orig) or die $img->errstr;
     $img = $img->scale(xpixels => $w, ypixels => $h);
     $img->write(file => $newfile);
-    #system("convert", "-geometry", "${w}x${h}", $orig, $newfile);
     open my $newfh, "<", $newfile or die $!;
     read $newfh, my $data, -s $newfile;
     close $newfh;
@@ -189,7 +203,7 @@ get '/icon/:icon' => sub {
           :                ICON_S;
     my $h = $w;
 
-    my $data = $self->convert("$dir/icon/${icon}.png", "png", $w, $h);
+    my $data = $self->convert_by_imager("$dir/icon/${icon}.png", "png", $w, $h);
     $c->res->content_type("image/png");
     $c->res->content( $data );
     $c->res;
