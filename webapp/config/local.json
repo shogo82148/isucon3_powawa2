@@ -6,6 +6,6 @@
     "username": "isucon",
     "password": ""
   },
-  "data_dir": "./data",
-  "cache_dir": "/tmp"
+  "data_dir": "/data",
+  "cache_dir": "/data/tmp"
 }
