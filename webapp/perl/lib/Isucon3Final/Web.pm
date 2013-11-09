@@ -34,7 +34,7 @@ sub convert {
     my $newfile = "$filename.$ext";
 
     my $img = Imager->new;
-    $img->read(file => '/home/ichinose/workspace/isucon3_powawa2/webapp/data/icon/default.png') or die $img->errstr;
+    $img->read(file => $orig) or die $img->errstr;
     $img = $img->scale(xpixels => $w, ypixels => $h);
     $img->write(file => $newfile);
     #system("convert", "-geometry", "${w}x${h}", $orig, $newfile);
