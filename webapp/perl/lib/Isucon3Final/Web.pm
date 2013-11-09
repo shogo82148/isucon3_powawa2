@@ -333,9 +333,16 @@ get '/image/:image' => [qw/ get_user /] => sub {
     my $h = $w;
     my $data;
     if ($w) {
-        my $file = $self->crop_square("$dir/image/${image}.jpg", "jpg");
-        $data = $self->convert($file, "jpg", $w, $h);
-        unlink $file;
+        my $cache = "image_${image}_$size";
+        my $cache_dir = $self->load_config->{cache_dir};
+        my $cache_file = "$cache_dir/$cache";
+        if( -e $cache_file ) {
+            $data = load_file($cache_file);
+        } else {
+            my $file = $self->crop_square("$dir/image/${image}.jpg", "jpg");
+            $data = $self->convert($file, "jpg", $w, $h, $cache);
+            unlink $file;
+        }
     }
     else {
         open my $in, "<", "$dir/image/${image}.jpg" or $c->halt(500);
